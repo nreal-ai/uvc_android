@@ -1,0 +1,9 @@
+
+cc_binary {
+    name: "uvc_test",
+    srcs: [
+        "main.c",
+	"v4l2.c",
+    "xreal_metadata.c",
+    ],
+}
