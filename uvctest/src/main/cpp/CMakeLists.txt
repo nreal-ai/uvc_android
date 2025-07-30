@@ -28,11 +28,13 @@ project("uvctest")
 
 add_executable(${CMAKE_PROJECT_NAME}
         # List C/C++ source files with relative paths to this CMakeLists.txt.
+#        uvctest.cpp
         main.c
         v4l2.c
         xreal_metadata.c
         show_image.cpp
-        show_image_c.cpp)
+        show_image_c.cpp
+        )
 
 set(OpenCV_DIR /Users/lpzhang/proj/uvc_cam/opencv-4.5.4-android-sdk/OpenCV-android-sdk)
 target_include_directories(${CMAKE_PROJECT_NAME}

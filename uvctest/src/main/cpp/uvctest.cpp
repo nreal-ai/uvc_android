@@ -11,5 +11,5 @@ Java_com_xreal_uvctest_NativeLib_stringFromJNI(
 
 
 int main(int argc, char** argv) {
-    return 1;
+    return 123;
 }
