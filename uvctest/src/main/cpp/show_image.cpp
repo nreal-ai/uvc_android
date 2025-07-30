@@ -1,4 +1,4 @@
-#include "record/show_image.h"
+#include "show_image.h"
 #include <record-threadsafe-queue.h>
 #include <thread>
 #include <dirent.h>  // use : opendir
@@ -14,7 +14,7 @@
 #include <opencv2/opencv.hpp>
 #include <opencv2/core.hpp>
 #include <opencv2/highgui.hpp>
-#include <nlohmann/json.hpp> // json
+#include <json.hpp> // json
 #include "signal_handler.h"  // 引入signal_handler
 
 

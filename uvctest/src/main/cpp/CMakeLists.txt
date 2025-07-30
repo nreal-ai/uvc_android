@@ -24,14 +24,34 @@ project("uvctest")
 # System.loadLibrary() and pass the name of the library defined here;
 # for GameActivity/NativeActivity derived applications, the same library name must be
 # used in the AndroidManifest.xml file.
+
+
 add_executable(${CMAKE_PROJECT_NAME}
         # List C/C++ source files with relative paths to this CMakeLists.txt.
-        uvctest.cpp)
+        main.c
+        v4l2.c
+        xreal_metadata.c
+        show_image.cpp
+        show_image_c.cpp)
 
+set(OpenCV_DIR /Users/lpzhang/proj/uvc_cam/opencv-4.5.4-android-sdk/OpenCV-android-sdk)
+target_include_directories(${CMAKE_PROJECT_NAME}
+        PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/includes
+        ${OpenCV_DIR}/sdk/native/jni/include)
 # Specifies libraries CMake should link to your target library. You
 # can link libraries from various origins, such as libraries defined in this
 # build script, prebuilt third-party libraries, or Android system libraries.
+set(OpenCV_LIB_PATH ${OpenCV_DIR}/sdk/native/libs/${ANDROID_ABI})
+message(WARNING "OpenCV_LIB_PATH path is: ${OpenCV_LIB_PATH}")
+#link_directories(${OpenCV_LIB_PATH})
+add_library( lib_opencv SHARED IMPORTED )
+set_target_properties(lib_opencv PROPERTIES IMPORTED_LOCATION ${OpenCV_LIB_PATH}/libopencv_java4.so)
+
+
+
 target_link_libraries(${CMAKE_PROJECT_NAME}
         # List libraries link to the target library
+        lib_opencv
         android
         log)

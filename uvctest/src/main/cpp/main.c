@@ -12,7 +12,7 @@
 
 #include "v4l2.h"
 #include "metadata.h"
-#include "record/show_image_global.h"
+#include "show_image_global.h"
 
 
 #define CLOSE_FD(_fd) if (_fd >= 0) { close(_fd); _fd = -1; }
@@ -113,7 +113,7 @@ int main(int argc, char** argv) {
     int opt_index = 0;
     int c;
 
-
+    char *photo_path ="";
     g_show_image_handle = ShowImage_Create(10000, 50000);
     ShowImage_Start(g_show_image_handle, RECORD_SAVE_ALL, photo_path, "cam0", "cam1");
 
