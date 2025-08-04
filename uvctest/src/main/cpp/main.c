@@ -57,8 +57,8 @@ void output(void* address, int width, int height, int64_t host_notify_time_nanos
 
     uint8_t* in = (uint8_t*)address;
     
-    FRAME_META_DATA *meta_data_cv0 = get_metadata_ptr_by_frame(in, CAMERA_CV0_ID);
-    FRAME_META_DATA *meta_data_cv1 = get_metadata_ptr_by_frame(in, CAMERA_CV1_ID);
+    FRAME_META_DATA *meta_data_cv0 = get_metadata_ptr_by_frame(in, CAMERA_CV0_ID, width, height);
+    FRAME_META_DATA *meta_data_cv1 = get_metadata_ptr_by_frame(in, CAMERA_CV1_ID, width, height);
         
     int image_width = 640;
 
@@ -75,18 +75,18 @@ void output(void* address, int width, int height, int64_t host_notify_time_nanos
     NRframe.cameras[0].camera_id = NR_GRAYSCALE_CAMERA_ID_1;
     NRframe.cameras[0].width =  image_width; //640
     NRframe.cameras[0].height = UVC_CAMERA_HEIGHT; //UVC_CAMERA_HEIGHT = 512
-    NRframe.cameras[0].stride = UVC_CAMERA_WIDTH>>1; // UVC_CAMERA_WIDTH/2 = 768
+    NRframe.cameras[0].stride = 0; // UVC_CAMERA_WIDTH/2 = 768
     NRframe.cameras[0].exposure_duration = meta_data_cv1->exposure_time_ns;
     NRframe.cameras[0].rolling_shutter_time = meta_data_cv1->rolling_shutter;
     NRframe.cameras[0].gain = meta_data_cv1->gain_value;
     NRframe.cameras[0].exposure_start_time_device = meta_data_cv1->timestamp;
     NRframe.cameras[0].exposure_start_time_system = 0;
 
-    NRframe.cameras[1].offset = 512 * 768;
+    NRframe.cameras[1].offset = 512 * 640;
     NRframe.cameras[1].camera_id = NR_GRAYSCALE_CAMERA_ID_0;
     NRframe.cameras[1].width =  image_width; //640
     NRframe.cameras[1].height = UVC_CAMERA_HEIGHT; //UVC_CAMERA_HEIGHT = 512
-    NRframe.cameras[1].stride = UVC_CAMERA_WIDTH>>1; // UVC_CAMERA_WIDTH/2 = 768
+    NRframe.cameras[1].stride = 0; // UVC_CAMERA_WIDTH/2 = 768
     NRframe.cameras[0].exposure_duration = meta_data_cv0->exposure_time_ns;
     NRframe.cameras[1].rolling_shutter_time = meta_data_cv0->rolling_shutter;
     NRframe.cameras[1].gain = meta_data_cv0->gain_value;
@@ -222,13 +222,12 @@ int main(int argc, char** argv) {
         elapsed_seconds = (current_time.tv_sec - start_time.tv_sec) +
                       (current_time.tv_nsec - start_time.tv_nsec) / 1e9;
 
+        void* frame_data = buffers[buffer_index].address;
+        size_t frame_size = buffers[buffer_index].bytesused;
+        // log output
+        int64_t host_notify_time_nanos = (int64_t)current_time.tv_sec * 1000000000LL + current_time.tv_nsec;
+        output(frame_data,fmt.width,fmt.height,host_notify_time_nanos);
         if (of_fd >= 0) {
-            void* frame_data = buffers[buffer_index].address;
-            size_t frame_size = buffers[buffer_index].bytesused;
-
-
-            int64_t host_notify_time_nanos = (int64_t)current_time.tv_sec * 1000000000LL + current_time.tv_nsec;
-            output(frame_data,fmt.width,fmt.height,host_notify_time_nanos);
 
             if (frame_size != write(of_fd, frame_data, frame_size)) {
                 printf("Saved frame failed: %s\n", strerror(errno));
