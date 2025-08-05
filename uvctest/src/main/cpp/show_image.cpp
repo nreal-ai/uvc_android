@@ -221,7 +221,10 @@ void ShowImage::recordCamera() {
     }
 
     if(ptr->frame_id<=0) {
-      std::cout << "frame_id <= 0. frame_id:" << ptr->frame_id << std::endl;
+      std::cout << "frame_id <= 0. frame_id:" << ptr->frame_id << " data:" << ptr->data  << std::endl;
+      if(ptr->data != 0){
+          delete[](uint8_t *)(ptr->data);
+      }
       continue;
     }
 
