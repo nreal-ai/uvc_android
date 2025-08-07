@@ -56,10 +56,10 @@ void print_usage(const char* proc) {
 void output(void* address, int width, int height, int64_t host_notify_time_nanos){
 
     uint8_t* in = (uint8_t*)address;
-    
+
     FRAME_META_DATA *meta_data_cv0 = get_metadata_ptr_by_frame(in, CAMERA_CV0_ID, width, height);
     FRAME_META_DATA *meta_data_cv1 = get_metadata_ptr_by_frame(in, CAMERA_CV1_ID, width, height);
-        
+
     int image_width = 640;
 
     NRGrayscaleCameraFrameData NRframe = {}; // 通过 {} 初始化所有成员为零
@@ -113,9 +113,7 @@ int main(int argc, char** argv) {
     int opt_index = 0;
     int c;
 
-    char *photo_path ="";
-    g_show_image_handle = ShowImage_Create(10000, 50000);
-    ShowImage_Start(g_show_image_handle, RECORD_SAVE_ALL, photo_path, "cam0", "cam1");
+    char *photo_path = "";
 
     while ((c = getopt_long(argc, argv, "d:s:r:f:o:h", long_options, &opt_index)) != -1) {
         switch (c) {
@@ -152,6 +150,8 @@ int main(int argc, char** argv) {
     printf("pixel_format: %s\n", v4l2_pixel_format_to_string(fmt.pixel_format));
 
 
+    g_show_image_handle = ShowImage_Create(10000, 50000);
+    ShowImage_Start(g_show_image_handle, RECORD_SAVE_ALL, photo_path, "cam0", "cam1");
     if (output_file != NULL) {
         of_fd = open(output_file, O_WRONLY | O_CREAT | O_APPEND, 0666);
         if (of_fd < 0) {
@@ -175,7 +175,7 @@ int main(int argc, char** argv) {
     }
 
     const int buffer_count = 4;
-    frame_buffer_t* buffers = NULL;
+    frame_buffer_t *buffers = NULL;
     if (v4l2_allocate_buffers(&buffers, fd, buffer_count) < 0) {
         fprintf(stderr, "Failed to allocate buffers\n");
         v4l2_close(fd);
@@ -215,20 +215,25 @@ int main(int argc, char** argv) {
             fprintf(stderr, "Failed to dequeue buffer\n");
             break;
         }
-
         frame_count++;
 
         clock_gettime(CLOCK_MONOTONIC, &current_time);
         elapsed_seconds = (current_time.tv_sec - start_time.tv_sec) +
-                      (current_time.tv_nsec - start_time.tv_nsec) / 1e9;
+                          (current_time.tv_nsec - start_time.tv_nsec) / 1e9;
 
-        void* frame_data = buffers[buffer_index].address;
+        void *frame_data = buffers[buffer_index].address;
         size_t frame_size = buffers[buffer_index].bytesused;
-        // log output
-        int64_t host_notify_time_nanos = (int64_t)current_time.tv_sec * 1000000000LL + current_time.tv_nsec;
-        output(frame_data,fmt.width,fmt.height,host_notify_time_nanos);
-        if (of_fd >= 0) {
 
+
+//        printf("buffer index = %d, frame data = %p, frame size = %d\n",
+//               buffer_index, frame_data, frame_size);
+
+        // log output
+        int64_t host_notify_time_nanos =
+                (int64_t) current_time.tv_sec * 1000000000LL + current_time.tv_nsec;
+        output(frame_data, fmt.width, fmt.height, host_notify_time_nanos);
+
+        if (of_fd >= 0) {
             if (frame_size != write(of_fd, frame_data, frame_size)) {
                 printf("Saved frame failed: %s\n", strerror(errno));
                 break;

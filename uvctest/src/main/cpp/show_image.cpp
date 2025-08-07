@@ -79,7 +79,7 @@ void ShowImage::start(RECORD_SAVE_TYPE type, const std::string& path, const std:
     if (save_type_ != SHOW_IMAGE_ONLY) {
         init(path, cam0_file_path, cam1_file_path, ext);
     }
-   
+
     record_thread_running_ = true;
     frame_meta_data_group_thread_.reset(new std::thread(std::bind(&ShowImage::recordCamera, this)));
 }
@@ -221,7 +221,7 @@ void ShowImage::recordCamera() {
     }
 
     if(ptr->frame_id<=0) {
-      std::cout << "frame_id <= 0. frame_id:" << ptr->frame_id << " data:" << ptr->data  << std::endl;
+//      std::cout << "frame_id <= 0. frame_id:" << ptr->frame_id << " data:" << (uint8_t *)ptr->data  << std::endl;
       if(ptr->data != 0){
           delete[](uint8_t *)(ptr->data);
       }
@@ -255,6 +255,7 @@ void ShowImage::recordCamera() {
     }
 
     std::ostringstream o;
+
     o << frame_index;
     if (image_suffix_.empty()) {
       tmp = o.str() + std::string(".jpg");
@@ -319,7 +320,7 @@ void ShowImage::recordCamera() {
         }
 
       }
-        
+
 
       camera_timestamp_txt.open(time_stamp_name.c_str(),
                                 std::ios::out | std::ios::app);
@@ -334,7 +335,7 @@ void ShowImage::recordCamera() {
       metadata_txt.precision(16);
       metadata_txt << tmp.c_str() << " " << hmd_hw_exposure_middle_time << " " << ptr->cameras[i].exposure_duration <<  " " << ptr->cameras[i].gain << " " << hmd_host_exposure_middle_time
                    <<  " " << ptr->cameras[i].exposure_start_time_device  << " " <<  ptr->cameras[i].rolling_shutter_time << " " << ptr->cameras[i].stride <<  " " << exposure_end_time_device << " "<< ptr->notify_time_nanos  << "\n"; //notify_time_nanos now is host_notify_time_nanos
-      
+
       metadata_txt.close();
 
     }
