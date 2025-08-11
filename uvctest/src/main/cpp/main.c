@@ -155,6 +155,8 @@ int main(int argc, char **argv) {
     printf("pixel_format: %s\n", v4l2_pixel_format_to_string(fmt.pixel_format));
 
 
+
+
     g_show_image_handle = ShowImage_Create(10000, 50000);
     ShowImage_Start(g_show_image_handle, RECORD_SAVE_ALL, photo_path, "cam0", "cam1");
     if (output_file != NULL) {
@@ -252,8 +254,17 @@ int main(int argc, char **argv) {
         }
 
         if (elapsed_seconds >= 1.0) {
+            struct timespec ts;
+            clock_gettime(CLOCK_REALTIME, &ts);
+            // 将秒部分转为本地时间
+            struct tm tm_time;
+            localtime_r(&ts.tv_sec, &tm_time);
+
+            char buf[64];
+            // 格式化到秒
+            strftime(buf, sizeof(buf), "%Y-%m-%d %H:%M:%S", &tm_time);
             float fps = frame_count / elapsed_seconds;
-            printf("FPS: %.2f\n", fps);
+            printf("FPS: %.2f Time: %s\n", fps,buf);
 
             // 重置计数器和起始时间
             frame_count = 0;
