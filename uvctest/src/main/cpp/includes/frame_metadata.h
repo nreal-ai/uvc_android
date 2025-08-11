@@ -39,8 +39,10 @@ typedef struct FrameMetaData {
     uint64_t timestamp;        // capture time
     uint64_t exposure_time_ns; // exposure duration
     uint64_t gain_value;       // gain
-    uint32_t rolling_shutter;  // rolling shutter
-    uint8_t reserved[76];
+    uint32_t rolling_shutter;  // rolling shutter+
+    uint64_t exposure_end_time_ns;
+    uint64_t uvc_send_time_ns;
+    uint8_t reserved[60];
     uint32_t magic1;
 } FRAME_META_DATA;
 
@@ -83,6 +85,8 @@ typedef struct NRGrayscaleCameraUnitData {
             uint32_t rolling_shutter_time;
             uint32_t gain;
             uint64_t exposure_start_time_system;
+            uint64_t exposure_end_time_device;
+            uint64_t uvc_send_time_device;
         };
         uint8_t padding[64];
     };
