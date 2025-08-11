@@ -27,16 +27,17 @@ void handle_signal(int signo) {
 
 // 长选项定义
 static struct option long_options[] = {
-    {"dev",         required_argument, 0, 'd'},
-    {"video_size",  required_argument, 0, 's'},
-    {"frame_rate",  required_argument, 0, 'f'},
-    {"pixel_format", required_argument, 0, 'p'},
-    {"output_file",  optional_argument, 0, 'o'},
-    {"help",        no_argument,       0, 'h'},
-    {0, 0, 0, 0}  // 结束标志
+        {"dev", required_argument, 0, 'd'},
+        {"video_size", required_argument, 0, 's'},
+        {"frame_rate", required_argument, 0, 'f'},
+        {"pixel_format", required_argument, 0, 'p'},
+        {"output_file", optional_argument, 0, 'o'},
+        {"help", no_argument, 0, 'h'},
+        {0, 0, 0, 0}  // 结束标志
 };
 
-void print_usage(const char* proc) {
+void print_usage(const char *proc) {
+    printf("Version: 1.0\n");
     printf("Usage: %s [OPTIONS]\n", proc);
     printf("  -d, --dev=/dev/videoX\n");
     printf("  -s, --video_size=WIDTHxHEIGHT\n");
@@ -53,9 +54,9 @@ void print_usage(const char* proc) {
 }
 
 
-void output(void* address, int width, int height, int64_t host_notify_time_nanos){
+void output(void *address, int width, int height, int64_t host_notify_time_nanos) {
 
-    uint8_t* in = (uint8_t*)address;
+    uint8_t *in = (uint8_t *) address;
 
     FRAME_META_DATA *meta_data_cv0 = get_metadata_ptr_by_frame(in, CAMERA_CV0_ID, width, height);
     FRAME_META_DATA *meta_data_cv1 = get_metadata_ptr_by_frame(in, CAMERA_CV1_ID, width, height);
@@ -66,14 +67,13 @@ void output(void* address, int width, int height, int64_t host_notify_time_nanos
     NRframe.notify_time_nanos = host_notify_time_nanos;
 
 
-
     NRframe.camera_count = 2;
     NRframe.data_bytes = width * height; // 计算数据字节数
     NRframe.pixel_format = NR_GRAYSCALE_CAMERA_PIXEL_FORMAT_YUV_420_888;
     NRframe.frame_id = meta_data_cv1->frame_id;
     NRframe.cameras[0].offset = 0;
     NRframe.cameras[0].camera_id = NR_GRAYSCALE_CAMERA_ID_1;
-    NRframe.cameras[0].width =  image_width; //640
+    NRframe.cameras[0].width = image_width; //640
     NRframe.cameras[0].height = UVC_CAMERA_HEIGHT; //UVC_CAMERA_HEIGHT = 512
     NRframe.cameras[0].stride = 0; // UVC_CAMERA_WIDTH/2 = 768
     NRframe.cameras[0].exposure_duration = meta_data_cv1->exposure_time_ns;
@@ -84,7 +84,7 @@ void output(void* address, int width, int height, int64_t host_notify_time_nanos
 
     NRframe.cameras[1].offset = 512 * 640;
     NRframe.cameras[1].camera_id = NR_GRAYSCALE_CAMERA_ID_0;
-    NRframe.cameras[1].width =  image_width; //640
+    NRframe.cameras[1].width = image_width; //640
     NRframe.cameras[1].height = UVC_CAMERA_HEIGHT; //UVC_CAMERA_HEIGHT = 512
     NRframe.cameras[1].stride = 0; // UVC_CAMERA_WIDTH/2 = 768
     NRframe.cameras[0].exposure_duration = meta_data_cv0->exposure_time_ns;
@@ -96,7 +96,8 @@ void output(void* address, int width, int height, int64_t host_notify_time_nanos
     //NRframe.data
     //////////////////////
     // 为 NRframe.data 分配足够的内存
-    NRframe.data = (uint8_t *)malloc(NRframe.data_bytes); //data release in ShowImage::recordCamera()
+    NRframe.data = (uint8_t *) malloc(
+            NRframe.data_bytes); //data release in ShowImage::recordCamera()
     //NRframe.data = new uint8_t[NRframe->data_bytes];
     // 使用 memcpy 复制数据
     memcpy(NRframe.data, in, NRframe.data_bytes);
@@ -105,10 +106,10 @@ void output(void* address, int width, int height, int64_t host_notify_time_nanos
     ShowImage_Push(g_show_image_handle, &NRframe);
 }
 
-int main(int argc, char** argv) {
+int main(int argc, char **argv) {
     video_fmt_t fmt = {0};
-    const char* dev = "/dev/videoX\0";
-    const char* output_file = NULL;
+    const char *dev = "/dev/videoX\0";
+    const char *output_file = NULL;
     int of_fd = -1;
     int opt_index = 0;
     int c;
