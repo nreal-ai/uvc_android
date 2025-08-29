@@ -39,6 +39,12 @@ android {
         targetCompatibility = JavaVersion.VERSION_1_8
     }
 }
+tasks.register("hello") {
+    doLast {
+        println("Hello world!")
+    }
+}
+
 
 dependencies {
 

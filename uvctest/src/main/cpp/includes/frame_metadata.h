@@ -40,9 +40,11 @@ typedef struct FrameMetaData {
     uint64_t exposure_time_ns; // exposure duration
     uint64_t gain_value;       // gain
     uint32_t rolling_shutter;  // rolling shutter+
-    uint64_t exposure_end_time_ns;
-    uint64_t uvc_send_time_ns;
-    uint8_t reserved[60];
+    uint32_t version;
+    uint64_t timestamp_system; //capture time on system  字段叫这个， 是 timestamp + host_time_offset 的结果
+    uint64_t exposure_end_time_ns; //add from zhang shi cheng
+    uint64_t uvc_send_time_ns; //add from zhang shi cheng
+    uint8_t reserved[48];
     uint32_t magic1;
 } FRAME_META_DATA;
 

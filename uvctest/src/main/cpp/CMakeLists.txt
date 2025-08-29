@@ -51,7 +51,6 @@ add_library( lib_opencv SHARED IMPORTED )
 set_target_properties(lib_opencv PROPERTIES IMPORTED_LOCATION ${OpenCV_LIB_PATH}/libopencv_java4.so)
 
 
-
 target_link_libraries(${CMAKE_PROJECT_NAME}
         # List libraries link to the target library
         lib_opencv

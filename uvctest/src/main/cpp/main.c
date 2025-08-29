@@ -37,7 +37,7 @@ static struct option long_options[] = {
 };
 
 void print_usage(const char *proc) {
-    printf("Version: 1.1\n");
+    printf("Version: 1.1.1\n");
     printf("Usage: %s [OPTIONS]\n", proc);
     printf("  -d, --dev=/dev/videoX\n");
     printf("  -s, --video_size=WIDTHxHEIGHT\n");
@@ -80,7 +80,7 @@ void output(void *address, int width, int height, int64_t host_notify_time_nanos
     NRframe.cameras[0].rolling_shutter_time = meta_data_cv1->rolling_shutter;
     NRframe.cameras[0].gain = meta_data_cv1->gain_value;
     NRframe.cameras[0].exposure_start_time_device = meta_data_cv1->timestamp;
-    NRframe.cameras[0].exposure_start_time_system = 0;
+    NRframe.cameras[0].exposure_start_time_system = meta_data_cv1->timestamp_system;
     NRframe.cameras[0].exposure_end_time_device = meta_data_cv1->exposure_end_time_ns;
     NRframe.cameras[0].uvc_send_time_device = meta_data_cv1->uvc_send_time_ns;
 
@@ -93,7 +93,7 @@ void output(void *address, int width, int height, int64_t host_notify_time_nanos
     NRframe.cameras[1].rolling_shutter_time = meta_data_cv0->rolling_shutter;
     NRframe.cameras[1].gain = meta_data_cv0->gain_value;
     NRframe.cameras[1].exposure_start_time_device = meta_data_cv0->timestamp;
-    NRframe.cameras[1].exposure_start_time_system = 0;
+    NRframe.cameras[1].exposure_start_time_system = meta_data_cv0->timestamp_system;
     NRframe.cameras[1].exposure_end_time_device = meta_data_cv0->exposure_end_time_ns;
     NRframe.cameras[1].uvc_send_time_device = meta_data_cv0->uvc_send_time_ns;
 
@@ -245,7 +245,6 @@ int main(int argc, char **argv) {
                 printf("Saved frame failed: %s\n", strerror(errno));
                 break;
             }
-
         }
 
         if (v4l2_buffer_enqueue(fd, buffer_index) < 0) {

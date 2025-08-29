@@ -218,7 +218,7 @@ void ShowImage::recordCamera() {
     cam_01_sync_check_file_.clear();
     cam_01_sync_check_file_ = std::string(dir_name_) + std::string("/cam_01_sync_check.csv");
     cam_01_sync_check_txt.open(cam_01_sync_check_file_, std::ios::out);
-    cam_01_sync_check_txt << "frame_id,image_filename,cam0_exposure_start_time_device,cam0_exposure_duration,cam0_rolling_shutter_time,cam0_gain,cam1_exposure_start_time_device,cam1_exposure_duration,cam1_rolling_shutter_time,cam1_gain,host_notify_time_nanos,cam0_exposure_end_time_device,cam0_uvc_send_time_device,cam1_exposure_end_time_device,cam1_uvc_send_time_device"<< "\n";
+    cam_01_sync_check_txt << "frame_id,image_filename,cam0_exposure_start_time_device,cam0_exposure_duration,cam0_rolling_shutter_time,cam0_gain,cam1_exposure_start_time_device,cam1_exposure_duration,cam1_rolling_shutter_time,cam1_gain,host_notify_time_nanos,cam0_exposure_end_time_device,cam0_uvc_send_time_device,cam1_exposure_end_time_device,cam1_uvc_send_time_device,cam0_exposure_start_time_system,cam1_exposure_start_time_system"<< "\n";
     cam_01_sync_check_txt.flush();
 
 
@@ -390,8 +390,9 @@ void ShowImage::recordCamera() {
                               << ptr->cameras[1].exposure_start_time_device <<"," << ptr->cameras[1].exposure_duration <<"," << ptr->cameras[1].rolling_shutter_time << "," << ptr->cameras[1].gain << ","
                               << ptr->notify_time_nanos  << ","
                               << ptr->cameras[0].exposure_end_time_device << "," << ptr->cameras[0].uvc_send_time_device << ","
-                              << ptr->cameras[1].exposure_end_time_device << "," << ptr->cameras[1].uvc_send_time_device
-                              << "\n";
+                              << ptr->cameras[1].exposure_end_time_device << "," << ptr->cameras[1].uvc_send_time_device << ","
+                              << ptr->cameras[0].exposure_start_time_system << "," << ptr->cameras[1].exposure_start_time_system
+                               << "\n";
         cam_01_sync_check_txt.flush();
 
 
