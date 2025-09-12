@@ -37,7 +37,7 @@ static struct option long_options[] = {
 };
 
 void print_usage(const char *proc) {
-    printf("Version: 1.1.1\n");
+    printf("Version: 1.1.3\n");
     printf("Usage: %s [OPTIONS]\n", proc);
     printf("  -d, --dev=/dev/videoX\n");
     printf("  -s, --video_size=WIDTHxHEIGHT\n");
@@ -89,7 +89,7 @@ void output(void *address, int width, int height, int64_t host_notify_time_nanos
     NRframe.cameras[1].width = image_width; //640
     NRframe.cameras[1].height = UVC_CAMERA_HEIGHT; //UVC_CAMERA_HEIGHT = 512
     NRframe.cameras[1].stride = 0; // UVC_CAMERA_WIDTH/2 = 768
-    NRframe.cameras[0].exposure_duration = meta_data_cv0->exposure_time_ns;
+    NRframe.cameras[1].exposure_duration = meta_data_cv0->exposure_time_ns;
     NRframe.cameras[1].rolling_shutter_time = meta_data_cv0->rolling_shutter;
     NRframe.cameras[1].gain = meta_data_cv0->gain_value;
     NRframe.cameras[1].exposure_start_time_device = meta_data_cv0->timestamp;
@@ -235,11 +235,12 @@ int main(int argc, char **argv) {
 //        printf("buffer index = %d, frame data = %p, frame size = %d\n",
 //               buffer_index, frame_data, frame_size);
 
-        // log output
-        int64_t host_notify_time_nanos =
-                (int64_t) current_time.tv_sec * 1000000000LL + current_time.tv_nsec;
-        output(frame_data, fmt.width, fmt.height, host_notify_time_nanos);
-
+        if(fmt.pixel_format == V4L2_PIX_FMT_GREY){
+            // log output
+            int64_t host_notify_time_nanos =
+                    (int64_t) current_time.tv_sec * 1000000000LL + current_time.tv_nsec;
+            output(frame_data, fmt.width, fmt.height, host_notify_time_nanos);
+        }
         if (of_fd >= 0) {
             if (frame_size != write(of_fd, frame_data, frame_size)) {
                 printf("Saved frame failed: %s\n", strerror(errno));
