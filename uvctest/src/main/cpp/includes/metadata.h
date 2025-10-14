@@ -14,6 +14,7 @@ typedef enum {
 } CV_CAMERA_ID;
 
 FRAME_META_DATA *get_metadata_ptr_by_frame(uint8_t *raw_frame_data, CV_CAMERA_ID camera_id, int width, int height);
+UNIVERSAL_META_DATA *get_universal_metadata(uint8_t *raw_frame_data,int width,int height);
 void print_frame_metadata(FRAME_META_DATA *meta_data, CV_CAMERA_ID camera_id);
 void check_frame_id(FRAME_META_DATA *meta_data, CV_CAMERA_ID camera_id);
 void check_frame_timestamp(FRAME_META_DATA *meta_data, CV_CAMERA_ID camera_id);

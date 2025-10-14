@@ -31,18 +31,20 @@ static struct option long_options[] = {
         {"video_size", required_argument, 0, 's'},
         {"frame_rate", required_argument, 0, 'f'},
         {"pixel_format", required_argument, 0, 'p'},
+        {"format_version", required_argument, 0, 'v'},
         {"output_file", optional_argument, 0, 'o'},
         {"help", no_argument, 0, 'h'},
         {0, 0, 0, 0}  // 结束标志
 };
 
 void print_usage(const char *proc) {
-    printf("Version: 1.1.3\n");
+    printf("Version: 1.1.5\n");
     printf("Usage: %s [OPTIONS]\n", proc);
     printf("  -d, --dev=/dev/videoX\n");
     printf("  -s, --video_size=WIDTHxHEIGHT\n");
     printf("  -r, --frame_rate=FRAME_RATE\n");
     printf("  -f, --pixel_format=PIXEL_FORMAT\n");
+    printf("  -v, --format_version=FORMAT_VERSION\n");
     printf("  -o, --output_file=FILE\n");
     printf("  -h, --help\n");
     printf("Available pixel formats:\n");
@@ -83,6 +85,7 @@ void output(void *address, int width, int height, int64_t host_notify_time_nanos
     NRframe.cameras[0].exposure_start_time_system = meta_data_cv1->timestamp_system;
     NRframe.cameras[0].exposure_end_time_device = meta_data_cv1->exposure_end_time_ns;
     NRframe.cameras[0].uvc_send_time_device = meta_data_cv1->uvc_send_time_ns;
+    NRframe.cameras[0].sensor_index = 0;
 
     NRframe.cameras[1].offset = 512 * 640;
     NRframe.cameras[1].camera_id = NR_GRAYSCALE_CAMERA_ID_0;
@@ -96,6 +99,46 @@ void output(void *address, int width, int height, int64_t host_notify_time_nanos
     NRframe.cameras[1].exposure_start_time_system = meta_data_cv0->timestamp_system;
     NRframe.cameras[1].exposure_end_time_device = meta_data_cv0->exposure_end_time_ns;
     NRframe.cameras[1].uvc_send_time_device = meta_data_cv0->uvc_send_time_ns;
+    NRframe.cameras[0].sensor_index = 1;
+
+    //NRframe.data
+    //////////////////////
+    // 为 NRframe.data 分配足够的内存
+    NRframe.data = (uint8_t *) malloc(
+            NRframe.data_bytes); //data release in ShowImage::recordCamera()
+    //NRframe.data = new uint8_t[NRframe->data_bytes];
+    // 使用 memcpy 复制数据
+    memcpy(NRframe.data, in, NRframe.data_bytes);
+    //////////////////////
+
+    ShowImage_Push(g_show_image_handle, &NRframe);
+}
+
+void outputV2(void *address, int width, int height,int64_t host_notify_time_nanos){
+    uint8_t *in = (uint8_t *) address;
+    UNIVERSAL_META_DATA *meta_data = get_universal_metadata(in,width,height);
+
+    int image_width = 640;
+    NRGrayscaleCameraFrameData NRframe = {}; // 通过 {} 初始化所有成员为零
+    NRframe.notify_time_nanos = host_notify_time_nanos;
+    NRframe.camera_count = 1;
+    NRframe.data_bytes = width * height; // 计算数据字节数
+    NRframe.pixel_format = NR_GRAYSCALE_CAMERA_PIXEL_FORMAT_YUV_420_888;
+    NRframe.frame_id = meta_data->frame_id;
+    NRframe.cameras[0].offset = 0;
+    NRframe.cameras[0].camera_id = NR_GRAYSCALE_CAMERA_ID_1;
+    NRframe.cameras[0].width = image_width; //640
+    NRframe.cameras[0].height = UVC_CAMERA_HEIGHT; //UVC_CAMERA_HEIGHT = 512
+    NRframe.cameras[0].stride = 0; // UVC_CAMERA_WIDTH/2 = 768
+    NRframe.cameras[0].exposure_duration = meta_data->exposure_time_ns;
+    NRframe.cameras[0].rolling_shutter_time = meta_data->rolling_shutter;
+    NRframe.cameras[0].gain = meta_data->gain_value;
+    NRframe.cameras[0].exposure_start_time_device = meta_data->timestamp;
+    NRframe.cameras[0].exposure_start_time_system = meta_data->timestamp_system;
+    NRframe.cameras[0].exposure_end_time_device = -1;
+    NRframe.cameras[0].uvc_send_time_device = -1;
+    NRframe.cameras[0].sensor_index = meta_data->sensor_index;
+//    printf("output v2 sensor index = %d frame_id = %d\n",meta_data->sensor_index,NRframe.frame_id);
 
     //NRframe.data
     //////////////////////
@@ -119,8 +162,9 @@ int main(int argc, char **argv) {
     int c;
 
     char *photo_path = "";
+    int format_version = 0;
 
-    while ((c = getopt_long(argc, argv, "d:s:r:f:o:h", long_options, &opt_index)) != -1) {
+    while ((c = getopt_long(argc, argv, "d:s:r:f:v:o:h", long_options, &opt_index)) != -1) {
         switch (c) {
             case 'd':
                 dev = optarg;
@@ -134,6 +178,9 @@ int main(int argc, char **argv) {
                 break;
             case 'f':  // pixel_format: 如 YUYV、MJPG 等
                 fmt.pixel_format = v4l2_pixel_format_from_string(optarg);
+                break;
+            case 'v':
+                format_version = atoi(optarg);
                 break;
             case 'o':
                 output_file = optarg;
@@ -153,11 +200,12 @@ int main(int argc, char **argv) {
     printf("video_size: %dx%d\n", fmt.width, fmt.height);
     printf("frame_rate: %d\n", fmt.frame_rate);
     printf("pixel_format: %s\n", v4l2_pixel_format_to_string(fmt.pixel_format));
+    printf("format_version: %d\n",format_version);
 
 
 
 
-    g_show_image_handle = ShowImage_Create(10000, 50000);
+    g_show_image_handle = ShowImage_Create(10000, 50000,format_version);
     ShowImage_Start(g_show_image_handle, RECORD_SAVE_ALL, photo_path, "cam0", "cam1");
     if (output_file != NULL) {
         of_fd = open(output_file, O_WRONLY | O_CREAT | O_APPEND, 0666);
@@ -239,7 +287,11 @@ int main(int argc, char **argv) {
             // log output
             int64_t host_notify_time_nanos =
                     (int64_t) current_time.tv_sec * 1000000000LL + current_time.tv_nsec;
-            output(frame_data, fmt.width, fmt.height, host_notify_time_nanos);
+            if(format_version == 0){
+                output(frame_data, fmt.width, fmt.height, host_notify_time_nanos);
+            }else if(format_version == 1){
+                outputV2(frame_data,fmt.width,fmt.height,host_notify_time_nanos);
+            }
         }
         if (of_fd >= 0) {
             if (frame_size != write(of_fd, frame_data, frame_size)) {

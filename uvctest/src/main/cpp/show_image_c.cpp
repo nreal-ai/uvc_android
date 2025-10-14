@@ -6,8 +6,8 @@
 extern "C" {
 
 // 创建实例
-ShowImageHandle ShowImage_Create(uint32_t max_imu_buf_size, uint32_t max_cam_buf_size) {
-    return reinterpret_cast<ShowImageHandle>(new ShowImage(max_imu_buf_size, max_cam_buf_size));
+ShowImageHandle ShowImage_Create(uint32_t max_imu_buf_size, uint32_t max_cam_buf_size,int format_version) {
+    return reinterpret_cast<ShowImageHandle>(new ShowImage(max_imu_buf_size, max_cam_buf_size,format_version));
 }
 
 // 销毁实例

@@ -18,9 +18,10 @@
 #include "signal_handler.h"  // 引入signal_handler
 
 
-ShowImage::ShowImage(uint32_t _max_imu_buf_size, uint32_t _max_cam_buf_size)
+ShowImage::ShowImage(uint32_t _max_imu_buf_size, uint32_t _max_cam_buf_size,int format_version)
         : kMaxIMUSize_(_max_imu_buf_size), kMaxCamSize_(_max_cam_buf_size) {
     record_thread_running_ = false;
+    format_version_ = format_version;
 }
 
 ShowImage::~ShowImage() {
@@ -214,13 +215,20 @@ void ShowImage::recordCamera() {
     cam_buff_txt.open(cam_buff_file_, std::ios::out);
 
 
-    std::ofstream cam_01_sync_check_txt;
-    cam_01_sync_check_file_.clear();
-    cam_01_sync_check_file_ = std::string(dir_name_) + std::string("/cam_01_sync_check.csv");
-    cam_01_sync_check_txt.open(cam_01_sync_check_file_, std::ios::out);
-    cam_01_sync_check_txt << "frame_id,image_filename,cam0_exposure_start_time_device,cam0_exposure_duration,cam0_rolling_shutter_time,cam0_gain,cam1_exposure_start_time_device,cam1_exposure_duration,cam1_rolling_shutter_time,cam1_gain,host_notify_time_nanos,cam0_exposure_end_time_device,cam0_uvc_send_time_device,cam1_exposure_end_time_device,cam1_uvc_send_time_device,cam0_exposure_start_time_system,cam1_exposure_start_time_system"<< "\n";
-    cam_01_sync_check_txt.flush();
+    std::ofstream cam_0_sync_check_txt;
+    cam_0_sync_check_file_.clear();
+    cam_0_sync_check_file_ = std::string(dir_name_) + std::string("/cam_0_sync_check.csv");
+    cam_0_sync_check_txt.open(cam_0_sync_check_file_, std::ios::out);
+    cam_0_sync_check_txt << "frame_id,image_filename,host_notify_time_nanos,cam0_exposure_start_time_device,cam0_exposure_duration,cam0_rolling_shutter_time,cam0_gain,cam0_exposure_end_time_device,cam0_uvc_send_time_device,cam0_exposure_start_time_system"<< "\n";
+    cam_0_sync_check_txt.flush();
 
+
+    std::ofstream cam_1_sync_check_txt;
+    cam_1_sync_check_file_.clear();
+    cam_1_sync_check_file_ = std::string(dir_name_) + std::string("/cam_1_sync_check.csv");
+    cam_1_sync_check_txt.open(cam_1_sync_check_file_, std::ios::out);
+    cam_1_sync_check_txt << "frame_id,image_filename,host_notify_time_nanos,cam1_exposure_start_time_device,cam1_exposure_duration,cam1_rolling_shutter_time,cam1_gain,cam1_exposure_end_time_device,cam1_uvc_send_time_device,cam1_exposure_start_time_system"<< "\n";
+    cam_1_sync_check_txt.flush();
 
     static int64_t hmd_hw_exposure_middle_time = 0;
     static int64_t hmd_host_exposure_middle_time = 0;
@@ -237,11 +245,9 @@ void ShowImage::recordCamera() {
 
     while (record_thread_running_ || cam_queue_.Size() > 0) {
         cam_ptr ptr = cam_queue_.Pop();
-
         if (nullptr == ptr) {
             continue;
         }
-
 //        std::cout << "frame_id:" << ptr->frame_id << " data size:" << ptr->data_bytes  << std::endl;
         if (ptr->frame_id <= 0) {
             if (ptr->data != 0) {
@@ -253,13 +259,10 @@ void ShowImage::recordCamera() {
         cam_buff_txt << cam_queue_.Size() << " " << kMaxCamSize_ << "\n";
         cam_buff_txt.flush();
 
-
         if (first_loop) {
             first_loop = false;
-
             std::cout << "start save image." << std::endl;
             for (int i = 0; i < ptr->camera_count; i++) {
-
                 if (false == only_save_metadata_) {
 
                     time_stamp_name = cam_file_path_[i] + std::string("timestamps.txt");
@@ -272,12 +275,10 @@ void ShowImage::recordCamera() {
                 metadata_txt.open(metadata_name.c_str(),
                                   std::ios::out);
                 metadata_txt.close();
-
             }
         }
 
         std::ostringstream o;
-
         o << frame_index;
         if (image_suffix_.empty()) {
             tmp = o.str() + std::string(".jpg");
@@ -287,9 +288,7 @@ void ShowImage::recordCamera() {
         tmp.at(0) = 'm';
 
         for (int i = 0; i < ptr->camera_count; i++) {
-
             if (ptr->camera_count > 1) {
-
                 image_name = cam_file_path_[i] + tmp;
                 hmd_hw_exposure_middle_time = ptr->cameras[i].exposure_start_time_device +
                                               (ptr->cameras[i].exposure_duration / 2) +
@@ -306,13 +305,10 @@ void ShowImage::recordCamera() {
                 }
                 time_stamp_name = cam_file_path_[i] + std::string("timestamps.txt");
                 metadata_name = cam_file_path_[i] + std::string("metadata.txt");
-
             } else {
-
                 //if (first_camid == -1) {
                 //  first_camid = ptr->cameras[i].camera_id;
                 //}
-
                 int idx = ptr->cameras[i].camera_id - 1; // cameraid 从1开始
                 image_name = cam_file_path_[idx] + tmp;
                 //std::cout << "==  "<< image_name << "  " <<  cam_file_path_[idx] <<  "  " << tmp  << "  " <<  idx  << " "<<  __FILE__ << __LINE__  << std::endl;
@@ -333,11 +329,8 @@ void ShowImage::recordCamera() {
                 metadata_name = cam_file_path_[idx] + std::string("metadata.txt");
             }
 
-
             if (false == only_save_metadata_) {
-
                 if (ptr->pixel_format == NR_GRAYSCALE_CAMERA_PIXEL_FORMAT_RGB_BAYER_8BPP) {
-
                     cv::Mat cv_image = cv::Mat(ptr->cameras[i].height + ptr->cameras[i].height / 2,
                                                ptr->cameras[i].width, CV_8UC1,
                                                (void *) ((uint8_t *) ptr->data +
@@ -347,10 +340,7 @@ void ShowImage::recordCamera() {
                     cv::Mat bgrImg;
                     cv::cvtColor(cv_image, bgrImg, cv::COLOR_YUV2BGR_I420);
                     cv::imwrite(image_name, bgrImg);
-
-
                 } else {
-
                     cv::Mat cv_image = cv::Mat(ptr->cameras[i].height, ptr->cameras[i].width,
                                                CV_8UC1,
                                                (void *) ((uint8_t *) ptr->data +
@@ -358,9 +348,7 @@ void ShowImage::recordCamera() {
                                                ptr->cameras[i].stride);
                     cv::imwrite(image_name, cv_image);
                 }
-
             }
-
 
             camera_timestamp_txt.open(time_stamp_name.c_str(),
                                       std::ios::out | std::ios::app);
@@ -368,7 +356,6 @@ void ShowImage::recordCamera() {
             camera_timestamp_txt << tmp.c_str() << " " << hmd_hw_exposure_middle_time * 1e-9
                                  << "\n";
             camera_timestamp_txt.close();
-
 
             metadata_txt.open(metadata_name.c_str(),
                               std::ios::out | std::ios::app);
@@ -382,19 +369,41 @@ void ShowImage::recordCamera() {
                          << "\n"; //notify_time_nanos now is host_notify_time_nanos
 
             metadata_txt.close();
-
         }
 
-        cam_01_sync_check_txt << ptr->frame_id << "," << tmp << ","
-                              << ptr->cameras[0].exposure_start_time_device <<"," << ptr->cameras[0].exposure_duration <<"," << ptr->cameras[0].rolling_shutter_time << "," << ptr->cameras[0].gain  << ","
-                              << ptr->cameras[1].exposure_start_time_device <<"," << ptr->cameras[1].exposure_duration <<"," << ptr->cameras[1].rolling_shutter_time << "," << ptr->cameras[1].gain << ","
-                              << ptr->notify_time_nanos  << ","
-                              << ptr->cameras[0].exposure_end_time_device << "," << ptr->cameras[0].uvc_send_time_device << ","
-                              << ptr->cameras[1].exposure_end_time_device << "," << ptr->cameras[1].uvc_send_time_device << ","
-                              << ptr->cameras[0].exposure_start_time_system << "," << ptr->cameras[1].exposure_start_time_system
-                               << "\n";
-        cam_01_sync_check_txt.flush();
+        if(format_version_ == 0){
+            cam_0_sync_check_txt << ptr->frame_id << "," << tmp << "," << ptr->notify_time_nanos << ","
+                                 << ptr->cameras[0].exposure_start_time_device <<"," << ptr->cameras[0].exposure_duration <<","
+                                 << ptr->cameras[0].rolling_shutter_time << "," << ptr->cameras[0].gain  << ","
+                                 << ptr->cameras[0].exposure_end_time_device << "," << ptr->cameras[0].uvc_send_time_device << ","
+                                 << ptr->cameras[0].exposure_start_time_system << "\n";
+            cam_0_sync_check_txt.flush();
 
+            cam_1_sync_check_txt << ptr->frame_id << "," << tmp << "," << ptr->notify_time_nanos << ","
+                                 << ptr->cameras[1].exposure_start_time_device <<"," << ptr->cameras[1].exposure_duration <<","
+                                 << ptr->cameras[1].rolling_shutter_time << "," << ptr->cameras[1].gain  << ","
+                                 << ptr->cameras[1].exposure_end_time_device << "," << ptr->cameras[1].uvc_send_time_device << ","
+                                 << ptr->cameras[1].exposure_start_time_system << "\n";
+            cam_1_sync_check_txt.flush();
+        }else if(format_version_ == 1){
+            if (ptr->cameras[0].sensor_index == 0){
+                cam_0_sync_check_txt << ptr->frame_id << "," << tmp << "," << ptr->notify_time_nanos << ","
+                                     << ptr->cameras[0].exposure_start_time_device <<"," << ptr->cameras[0].exposure_duration <<","
+                                     << ptr->cameras[0].rolling_shutter_time << "," << ptr->cameras[0].gain  << ","
+                                     << ptr->cameras[0].exposure_end_time_device << "," << ptr->cameras[0].uvc_send_time_device << ","
+                                     << ptr->cameras[0].exposure_start_time_system << "\n";
+                cam_0_sync_check_txt.flush();
+            }else if(ptr->cameras[0].sensor_index == 1){
+                cam_1_sync_check_txt << ptr->frame_id << "," << tmp << "," << ptr->notify_time_nanos << ","
+                                     << ptr->cameras[0].exposure_start_time_device <<"," << ptr->cameras[0].exposure_duration <<","
+                                     << ptr->cameras[0].rolling_shutter_time << "," << ptr->cameras[0].gain  << ","
+                                     << ptr->cameras[0].exposure_end_time_device << "," << ptr->cameras[0].uvc_send_time_device << ","
+                                     << ptr->cameras[0].exposure_start_time_system << "\n";
+                cam_1_sync_check_txt.flush();
+            }
+
+//            std::cout << "format version v2 sensor_index = : " << ptr->cameras[0].sensor_index << std::endl;
+        }
 
         delete[](uint8_t *) (ptr->data);
 

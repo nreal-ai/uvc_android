@@ -48,6 +48,23 @@ typedef struct FrameMetaData {
     uint32_t magic1;
 } FRAME_META_DATA;
 
+typedef struct UniversalFrameMetaData {
+    uint32_t magic0;
+    uint32_t frame_id;
+    uint32_t width;
+    uint32_t height;
+    uint32_t stride;
+    uint64_t timestamp;        // capture time
+    uint64_t exposure_time_ns; // exposure duration
+    uint64_t gain_value;       // gain
+    uint32_t rolling_shutter;  // rolling shutter
+    uint32_t version;          // struct version
+    uint64_t timestamp_system; // timestamp + host_time_offset
+    uint8_t sensor_index;   //left=0,right=1
+    uint8_t reserved[63];
+    uint32_t magic1;
+} UNIVERSAL_META_DATA;
+
 //typedef struct FrameMetaData {
 //    uint32_t pool_id;
 //    uint32_t frame_size;
@@ -89,6 +106,7 @@ typedef struct NRGrayscaleCameraUnitData {
             uint64_t exposure_start_time_system;
             uint64_t exposure_end_time_device;
             uint64_t uvc_send_time_device;
+            uint8_t sensor_index;
         };
         uint8_t padding[64];
     };
@@ -111,4 +129,7 @@ typedef struct NRGrayscaleCameraFrameData {
     };
 
 } NRGrayscaleCameraFrameData;
+
+
+
 #pragma pack()

@@ -11,7 +11,7 @@ class ShowImage {
     typedef std::shared_ptr<NRGrayscaleCameraFrameData> cam_ptr;
 
   public:
-    ShowImage(uint32_t _max_imu_buf_size = 10000, uint32_t _max_cam_buf_size = 50000);
+    ShowImage(uint32_t _max_imu_buf_size = 10000, uint32_t _max_cam_buf_size = 50000,int format_version = 0);
     virtual ~ShowImage();
 
     void push(const NRGrayscaleCameraFrameData *frame_meta_data_group);
@@ -42,7 +42,8 @@ class ShowImage {
 
     std::string imu_buff_file_;
     std::string cam_buff_file_;
-    std::string cam_01_sync_check_file_;
+    std::string cam_0_sync_check_file_;
+    std::string cam_1_sync_check_file_;
 
 
     std::string json_file_ = "record_config.json";
@@ -50,4 +51,5 @@ class ShowImage {
     bool only_save_metadata_{false};
     std::string imu_data_format_;
     RECORD_SAVE_TYPE save_type_;
+    int format_version_;
 };

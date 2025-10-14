@@ -48,7 +48,7 @@ typedef void* ShowImageHandle;
 //} RECORD_SAVE_TYPE;
 
 // 创建/销毁
-ShowImageHandle ShowImage_Create(uint32_t max_imu_buf_size, uint32_t max_cam_buf_size);
+ShowImageHandle ShowImage_Create(uint32_t max_imu_buf_size, uint32_t max_cam_buf_size,int format_version);
 void ShowImage_Destroy(ShowImageHandle handle);
 
 // 推送FrameMetaDataGroup
