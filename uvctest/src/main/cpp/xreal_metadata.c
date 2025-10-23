@@ -25,12 +25,13 @@ get_metadata_ptr_by_frame(uint8_t *raw_frame_data, CV_CAMERA_ID camera_id, int w
     return meta_data_ptr;
 }
 
-UNIVERSAL_META_DATA *get_universal_metadata(uint8_t *raw_frame_data, int width, int height) {
-    UNIVERSAL_META_DATA *meta_data_ptr = NULL;
+//UNIVERSAL_META_DATA *get_universal_metadata(uint8_t *raw_frame_data, int width, int height) {
+//    UNIVERSAL_META_DATA *meta_data_ptr = NULL;
+//    meta_data_ptr = (UNIVERSAL_META_DATA *) (raw_frame_data + width * (height - 1));
+//    return meta_data_ptr;
+//}
 
-    meta_data_ptr = (UNIVERSAL_META_DATA *) (raw_frame_data + width * (height - 1));
-    return meta_data_ptr;
-}
+
 
 void check_frame_id(FRAME_META_DATA *meta_data, CV_CAMERA_ID camera_id) {
     struct timespec ts;

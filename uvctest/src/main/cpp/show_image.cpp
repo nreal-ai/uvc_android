@@ -263,8 +263,7 @@ void ShowImage::recordCamera() {
             first_loop = false;
             std::cout << "start save image." << std::endl;
             for (int i = 0; i < ptr->camera_count; i++) {
-                if (false == only_save_metadata_) {
-
+                if (!only_save_metadata_) {
                     time_stamp_name = cam_file_path_[i] + std::string("timestamps.txt");
                     camera_timestamp_txt.open(time_stamp_name.c_str(),
                                               std::ios::out);
@@ -329,7 +328,7 @@ void ShowImage::recordCamera() {
                 metadata_name = cam_file_path_[idx] + std::string("metadata.txt");
             }
 
-            if (false == only_save_metadata_) {
+            if (!only_save_metadata_) {
                 if (ptr->pixel_format == NR_GRAYSCALE_CAMERA_PIXEL_FORMAT_RGB_BAYER_8BPP) {
                     cv::Mat cv_image = cv::Mat(ptr->cameras[i].height + ptr->cameras[i].height / 2,
                                                ptr->cameras[i].width, CV_8UC1,
@@ -340,7 +339,7 @@ void ShowImage::recordCamera() {
                     cv::Mat bgrImg;
                     cv::cvtColor(cv_image, bgrImg, cv::COLOR_YUV2BGR_I420);
                     cv::imwrite(image_name, bgrImg);
-                } else {
+                } else if(ptr->pixel_format == NR_GRAYSCALE_CAMERA_PIXEL_FORMAT_YUV_420_888){
                     cv::Mat cv_image = cv::Mat(ptr->cameras[i].height, ptr->cameras[i].width,
                                                CV_8UC1,
                                                (void *) ((uint8_t *) ptr->data +
@@ -367,7 +366,6 @@ void ShowImage::recordCamera() {
                          << ptr->cameras[i].rolling_shutter_time << " " << ptr->cameras[i].stride
                          << " " << exposure_end_time_device << " " << ptr->notify_time_nanos
                          << "\n"; //notify_time_nanos now is host_notify_time_nanos
-
             metadata_txt.close();
         }
 
@@ -401,8 +399,6 @@ void ShowImage::recordCamera() {
                                      << ptr->cameras[0].exposure_start_time_system << "\n";
                 cam_1_sync_check_txt.flush();
             }
-
-//            std::cout << "format version v2 sensor_index = : " << ptr->cameras[0].sensor_index << std::endl;
         }
 
         delete[](uint8_t *) (ptr->data);
