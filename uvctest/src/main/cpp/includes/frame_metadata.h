@@ -22,6 +22,13 @@ typedef enum NRGrayscaleCameraPixelFormat {
     NR_GRAYSCALE_CAMERA_PIXEL_FORMAT_RGB_BAYER_8BPP,
 } NRGrayscaleCameraPixelFormat;
 
+typedef enum NRCameraPixelFormat{
+    NR_CAMERA_PIXEL_FORMAT_UNKNOWN = 0,
+    NR_CAMERA_PIXEL_FORMAT_YUV_420_888,
+    NR_CAMERA_PIXEL_FORMAT_RGB_BAYER_8BPP,
+    NR_CAMERA_PIXEL_FORMAT_HEVC,
+}NRCameraPixelFormat;
+
 typedef enum NRGrayscaleCameraID {
     NR_GRAYSCALE_CAMERA_ID_0 = 0x0001,
     NR_GRAYSCALE_CAMERA_ID_1 = 0x0002,
@@ -121,7 +128,7 @@ typedef struct NRGrayscaleCameraFrameData {
             uint32_t data_bytes;
             uint8_t camera_count;
             uint32_t frame_id;
-            NRGrayscaleCameraPixelFormat pixel_format;
+            NRCameraPixelFormat pixel_format;
             uint64_t notify_time_nanos;//如果运行在host上，就是host_notify_time_nanos, //如果运行在设备上，就是device_notify_time_nanos
             //uint8_t record_flag; // 0x01: 只录metadata.txt.  0x02: 只录image+timestamp.txt. 0x03: 录metadata.txt和image+timestamp.txt.
         };

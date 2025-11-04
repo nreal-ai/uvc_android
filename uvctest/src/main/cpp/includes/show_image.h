@@ -2,6 +2,8 @@
 #include <thread>
 #include <memory>
 #include <string>
+#include <media/NdkImageReader.h>
+#include <media/NdkMediaCodec.h>
 #include "frame_metadata.h"
 #include "record-threadsafe-queue.h"
 
@@ -27,6 +29,9 @@ class ShowImage {
     // 拷贝文件
     bool copyFile(const std::string& src, const std::string& dst);
 
+private:
+    void startMediaCodec(int width, int height);
+    void decodeAndSaveFrame(cam_ptr ptr,std::string image_name);
   protected:
     bool record_thread_running_{false};
     Record::ThreadSafeQueue<cam_ptr> cam_queue_;
@@ -52,4 +57,6 @@ class ShowImage {
     std::string imu_data_format_;
     RECORD_SAVE_TYPE save_type_;
     int format_version_;
+
+    AMediaCodec* codec_;
 };

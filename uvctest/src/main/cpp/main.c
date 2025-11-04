@@ -10,6 +10,9 @@
 #include <getopt.h>
 #include <time.h>
 
+#include <media/NdkImageReader.h>
+#include <media/NdkMediaCodec.h>
+
 #include "v4l2.h"
 #include "metadata.h"
 #include "show_image_global.h"
@@ -38,7 +41,7 @@ static struct option long_options[] = {
 };
 
 void print_usage(const char *proc) {
-    printf("Version: 1.1.7\n");
+    printf("Version: 1.2.0\n");
     printf("Usage: %s [OPTIONS]\n", proc);
     printf("  -d, --dev=/dev/videoX\n");
     printf("  -s, --video_size=WIDTHxHEIGHT\n");
@@ -69,7 +72,7 @@ void output(void *address, int width, int height, int64_t host_notify_time_nanos
 
     NRframe.camera_count = 2;
     NRframe.data_bytes = width * height; // 计算数据字节数
-    NRframe.pixel_format = NR_GRAYSCALE_CAMERA_PIXEL_FORMAT_YUV_420_888;
+    NRframe.pixel_format = NR_CAMERA_PIXEL_FORMAT_YUV_420_888;
     NRframe.frame_id = meta_data_cv1->frame_id;
     NRframe.cameras[0].offset = 0;
     NRframe.cameras[0].camera_id = NR_GRAYSCALE_CAMERA_ID_1;
@@ -119,7 +122,7 @@ void outputV2(void *address, int width, int height, int64_t host_notify_time_nan
     NRframe.notify_time_nanos = host_notify_time_nanos;
     NRframe.camera_count = 1;
     NRframe.data_bytes = width * height; // 计算数据字节数
-    NRframe.pixel_format = NR_GRAYSCALE_CAMERA_PIXEL_FORMAT_YUV_420_888;
+    NRframe.pixel_format = NR_CAMERA_PIXEL_FORMAT_YUV_420_888;
     NRframe.frame_id = meta_data->frame_id;
     NRframe.cameras[0].offset = 0;
     NRframe.cameras[0].camera_id =
@@ -153,20 +156,21 @@ void outputRgb(void *address, int size, int64_t host_notify_time_nanos) {
     }
     UNIVERSAL_META_DATA *meta_data = (UNIVERSAL_META_DATA *) (address + size - 128);
 
-//    printf("UNIVERSAL_META_DATA frame_id : %d\n", meta_data->frame_id);
+    printf("UNIVERSAL_META_DATA frame_id : %d\n", meta_data->frame_id);
 //    printf("UNIVERSAL_META_DATA timestamp : %llu\n", meta_data->timestamp);
-    int image_width = 1920;
+    int width = 1920;
+    int height = 1080;
     NRGrayscaleCameraFrameData NRframe = {}; // 通过 {} 初始化所有成员为零
     NRframe.notify_time_nanos = host_notify_time_nanos;
     NRframe.camera_count = 1;
     NRframe.data_bytes = size - 128; // 计算数据字节数
-    NRframe.pixel_format = NR_GRAYSCALE_CAMERA_PIXEL_FORMAT_UNKNOWN;
+    NRframe.pixel_format = NR_CAMERA_PIXEL_FORMAT_HEVC;
     NRframe.frame_id = meta_data->frame_id;
     NRframe.cameras[0].offset = 0;
     NRframe.cameras[0].camera_id = 1;
-    NRframe.cameras[0].width = image_width; //640
-    NRframe.cameras[0].height = 1080; //UVC_CAMERA_HEIGHT = 512
-    NRframe.cameras[0].stride = 0; // UVC_CAMERA_WIDTH/2 = 768
+    NRframe.cameras[0].width = width;
+    NRframe.cameras[0].height = height;
+    NRframe.cameras[0].stride = 0;
     NRframe.cameras[0].exposure_duration = meta_data->exposure_time_ns;
     NRframe.cameras[0].rolling_shutter_time = meta_data->rolling_shutter;
     NRframe.cameras[0].gain = meta_data->gain_value;
@@ -237,7 +241,7 @@ int main(int argc, char **argv) {
 
 
     // 彩色摄像头只存在单目情况，忽略输入的format version参数
-    int real_format_version = fmt.pixel_format == V4L2_PIX_FMT_GREY? format_version: 1;
+    int real_format_version = fmt.pixel_format == V4L2_PIX_FMT_HEVC? 1: format_version;
     g_show_image_handle = ShowImage_Create(10000, 50000,real_format_version);
     ShowImage_Start(g_show_image_handle, RECORD_SAVE_ALL, photo_path, "cam0", "cam1");
     if (output_file != NULL) {
@@ -321,7 +325,7 @@ int main(int argc, char **argv) {
             } else if (format_version == 1) {
                 outputV2(frame_data, fmt.width, fmt.height, host_notify_time_nanos);
             }
-        } else {
+        } else if(fmt.pixel_format == V4L2_PIX_FMT_HEVC){
             outputRgb(frame_data,(int)frame_size,host_notify_time_nanos);
         }
         if (of_fd >= 0) {

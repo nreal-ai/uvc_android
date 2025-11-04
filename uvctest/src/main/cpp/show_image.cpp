@@ -18,7 +18,7 @@
 #include "signal_handler.h"  // 引入signal_handler
 
 
-ShowImage::ShowImage(uint32_t _max_imu_buf_size, uint32_t _max_cam_buf_size,int format_version)
+ShowImage::ShowImage(uint32_t _max_imu_buf_size, uint32_t _max_cam_buf_size, int format_version)
         : kMaxIMUSize_(_max_imu_buf_size), kMaxCamSize_(_max_cam_buf_size) {
     record_thread_running_ = false;
     format_version_ = format_version;
@@ -219,7 +219,9 @@ void ShowImage::recordCamera() {
     cam_0_sync_check_file_.clear();
     cam_0_sync_check_file_ = std::string(dir_name_) + std::string("/cam_0_sync_check.csv");
     cam_0_sync_check_txt.open(cam_0_sync_check_file_, std::ios::out);
-    cam_0_sync_check_txt << "frame_id,image_filename,host_notify_time_nanos,cam0_exposure_start_time_device,cam0_exposure_duration,cam0_rolling_shutter_time,cam0_gain,cam0_exposure_end_time_device,cam0_uvc_send_time_device,cam0_exposure_start_time_system"<< "\n";
+    cam_0_sync_check_txt
+            << "frame_id,image_filename,host_notify_time_nanos,cam0_exposure_start_time_device,cam0_exposure_duration,cam0_rolling_shutter_time,cam0_gain,cam0_exposure_end_time_device,cam0_uvc_send_time_device,cam0_exposure_start_time_system"
+            << "\n";
     cam_0_sync_check_txt.flush();
 
 
@@ -227,7 +229,9 @@ void ShowImage::recordCamera() {
     cam_1_sync_check_file_.clear();
     cam_1_sync_check_file_ = std::string(dir_name_) + std::string("/cam_1_sync_check.csv");
     cam_1_sync_check_txt.open(cam_1_sync_check_file_, std::ios::out);
-    cam_1_sync_check_txt << "frame_id,image_filename,host_notify_time_nanos,cam1_exposure_start_time_device,cam1_exposure_duration,cam1_rolling_shutter_time,cam1_gain,cam1_exposure_end_time_device,cam1_uvc_send_time_device,cam1_exposure_start_time_system"<< "\n";
+    cam_1_sync_check_txt
+            << "frame_id,image_filename,host_notify_time_nanos,cam1_exposure_start_time_device,cam1_exposure_duration,cam1_rolling_shutter_time,cam1_gain,cam1_exposure_end_time_device,cam1_uvc_send_time_device,cam1_exposure_start_time_system"
+            << "\n";
     cam_1_sync_check_txt.flush();
 
     static int64_t hmd_hw_exposure_middle_time = 0;
@@ -329,7 +333,7 @@ void ShowImage::recordCamera() {
             }
 
             if (!only_save_metadata_) {
-                if (ptr->pixel_format == NR_GRAYSCALE_CAMERA_PIXEL_FORMAT_RGB_BAYER_8BPP) {
+                if (ptr->pixel_format == NR_CAMERA_PIXEL_FORMAT_RGB_BAYER_8BPP) {
                     cv::Mat cv_image = cv::Mat(ptr->cameras[i].height + ptr->cameras[i].height / 2,
                                                ptr->cameras[i].width, CV_8UC1,
                                                (void *) ((uint8_t *) ptr->data +
@@ -339,13 +343,16 @@ void ShowImage::recordCamera() {
                     cv::Mat bgrImg;
                     cv::cvtColor(cv_image, bgrImg, cv::COLOR_YUV2BGR_I420);
                     cv::imwrite(image_name, bgrImg);
-                } else if(ptr->pixel_format == NR_GRAYSCALE_CAMERA_PIXEL_FORMAT_YUV_420_888){
+                } else if (ptr->pixel_format == NR_CAMERA_PIXEL_FORMAT_YUV_420_888) {
                     cv::Mat cv_image = cv::Mat(ptr->cameras[i].height, ptr->cameras[i].width,
                                                CV_8UC1,
                                                (void *) ((uint8_t *) ptr->data +
                                                          ptr->cameras[i].offset),
                                                ptr->cameras[i].stride);
                     cv::imwrite(image_name, cv_image);
+                } else if (ptr->pixel_format == NR_CAMERA_PIXEL_FORMAT_HEVC) {
+                    image_name = cam_file_path_[0] + std::to_string(frame_index) + std::string(".yuv");
+                    decodeAndSaveFrame(ptr,image_name);
                 }
             }
 
@@ -369,40 +376,55 @@ void ShowImage::recordCamera() {
             metadata_txt.close();
         }
 
-        if(format_version_ == 0){
-            cam_0_sync_check_txt << ptr->frame_id << "," << tmp << "," << ptr->notify_time_nanos << ","
-                                 << ptr->cameras[0].exposure_start_time_device <<"," << ptr->cameras[0].exposure_duration <<","
-                                 << ptr->cameras[0].rolling_shutter_time << "," << ptr->cameras[0].gain  << ","
-                                 << ptr->cameras[0].exposure_end_time_device << "," << ptr->cameras[0].uvc_send_time_device << ","
+        if (format_version_ == 0) {
+            cam_0_sync_check_txt << ptr->frame_id << "," << tmp << "," << ptr->notify_time_nanos
+                                 << ","
+                                 << ptr->cameras[0].exposure_start_time_device << ","
+                                 << ptr->cameras[0].exposure_duration << ","
+                                 << ptr->cameras[0].rolling_shutter_time << ","
+                                 << ptr->cameras[0].gain << ","
+                                 << ptr->cameras[0].exposure_end_time_device << ","
+                                 << ptr->cameras[0].uvc_send_time_device << ","
                                  << ptr->cameras[0].exposure_start_time_system << "\n";
             cam_0_sync_check_txt.flush();
 
-            cam_1_sync_check_txt << ptr->frame_id << "," << tmp << "," << ptr->notify_time_nanos << ","
-                                 << ptr->cameras[1].exposure_start_time_device <<"," << ptr->cameras[1].exposure_duration <<","
-                                 << ptr->cameras[1].rolling_shutter_time << "," << ptr->cameras[1].gain  << ","
-                                 << ptr->cameras[1].exposure_end_time_device << "," << ptr->cameras[1].uvc_send_time_device << ","
+            cam_1_sync_check_txt << ptr->frame_id << "," << tmp << "," << ptr->notify_time_nanos
+                                 << ","
+                                 << ptr->cameras[1].exposure_start_time_device << ","
+                                 << ptr->cameras[1].exposure_duration << ","
+                                 << ptr->cameras[1].rolling_shutter_time << ","
+                                 << ptr->cameras[1].gain << ","
+                                 << ptr->cameras[1].exposure_end_time_device << ","
+                                 << ptr->cameras[1].uvc_send_time_device << ","
                                  << ptr->cameras[1].exposure_start_time_system << "\n";
             cam_1_sync_check_txt.flush();
-        }else if(format_version_ == 1){
-            if (ptr->cameras[0].sensor_index == 0){
-                cam_0_sync_check_txt << ptr->frame_id << "," << tmp << "," << ptr->notify_time_nanos << ","
-                                     << ptr->cameras[0].exposure_start_time_device <<"," << ptr->cameras[0].exposure_duration <<","
-                                     << ptr->cameras[0].rolling_shutter_time << "," << ptr->cameras[0].gain  << ","
-                                     << ptr->cameras[0].exposure_end_time_device << "," << ptr->cameras[0].uvc_send_time_device << ","
+        } else if (format_version_ == 1) {
+            if (ptr->cameras[0].sensor_index == 0) {
+                cam_0_sync_check_txt << ptr->frame_id << "," << tmp << "," << ptr->notify_time_nanos
+                                     << ","
+                                     << ptr->cameras[0].exposure_start_time_device << ","
+                                     << ptr->cameras[0].exposure_duration << ","
+                                     << ptr->cameras[0].rolling_shutter_time << ","
+                                     << ptr->cameras[0].gain << ","
+                                     << ptr->cameras[0].exposure_end_time_device << ","
+                                     << ptr->cameras[0].uvc_send_time_device << ","
                                      << ptr->cameras[0].exposure_start_time_system << "\n";
                 cam_0_sync_check_txt.flush();
-            }else if(ptr->cameras[0].sensor_index == 1){
-                cam_1_sync_check_txt << ptr->frame_id << "," << tmp << "," << ptr->notify_time_nanos << ","
-                                     << ptr->cameras[0].exposure_start_time_device <<"," << ptr->cameras[0].exposure_duration <<","
-                                     << ptr->cameras[0].rolling_shutter_time << "," << ptr->cameras[0].gain  << ","
-                                     << ptr->cameras[0].exposure_end_time_device << "," << ptr->cameras[0].uvc_send_time_device << ","
+            } else if (ptr->cameras[0].sensor_index == 1) {
+                cam_1_sync_check_txt << ptr->frame_id << "," << tmp << "," << ptr->notify_time_nanos
+                                     << ","
+                                     << ptr->cameras[0].exposure_start_time_device << ","
+                                     << ptr->cameras[0].exposure_duration << ","
+                                     << ptr->cameras[0].rolling_shutter_time << ","
+                                     << ptr->cameras[0].gain << ","
+                                     << ptr->cameras[0].exposure_end_time_device << ","
+                                     << ptr->cameras[0].uvc_send_time_device << ","
                                      << ptr->cameras[0].exposure_start_time_system << "\n";
                 cam_1_sync_check_txt.flush();
             }
         }
 
         delete[](uint8_t *) (ptr->data);
-
         frame_index++;
 
         if (ptr->camera_count > 1) {
@@ -430,3 +452,72 @@ bool ShowImage::copyFile(const std::string &src, const std::string &dst) {
 }
 
 std::string ShowImage::getRecordPath() { return std::string(dir_name_); }
+
+void ShowImage::startMediaCodec(int width, int height) {
+    std::cout << "startMediaCodec with:" << width << "x" << height << std::endl;
+    codec_ = AMediaCodec_createDecoderByType("video/hevc");
+    AMediaFormat *format = AMediaFormat_new();
+    AMediaFormat_setString(format, AMEDIAFORMAT_KEY_MIME, "video/hevc");
+    AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_WIDTH, width);
+    AMediaFormat_setInt32(format, AMEDIAFORMAT_KEY_HEIGHT, height);
+
+    media_status_t status = AMediaCodec_configure(codec_, format, nullptr, nullptr, 0);
+    if (status == AMEDIA_OK) {
+        AMediaCodec_start(codec_);
+    } else {
+        std::cout << "AMediaCodec_configure failed: " << status << std::endl;
+        codec_ = nullptr;
+    }
+}
+
+void ShowImage::decodeAndSaveFrame(cam_ptr ptr,std::string image_name){
+    if (codec_ == nullptr) {
+        startMediaCodec(ptr->cameras[0].width, ptr->cameras[0].height);
+    }
+    if (codec_ == nullptr) {
+        return;
+    }
+
+
+
+    if (ptr->data[0] == 0x00 && ptr->data[1] == 0x00 && (ptr->data[2] == 0x01 || (ptr->data[2] == 0x00 && ptr->data[3] == 0x01))){
+        ssize_t bufIdx = AMediaCodec_dequeueInputBuffer(codec_, 10000);
+
+        printf("Decoding frame size: %zu bytes -> %ld\n", ptr->data_bytes, bufIdx);
+        // LOGI("Decoding frame size: %zu bytes -> %ld", data.size(), bufIdx);
+        if (bufIdx >= 0) {
+            size_t bufSize;
+            uint8_t *buf = AMediaCodec_getInputBuffer(codec_, bufIdx, &bufSize);
+
+            if (buf && ptr->data_bytes <= bufSize) {
+                printf("AMediaCodec_queueInputBuffer data.size()  bufSize %zu %zu\n", ptr->data_bytes, bufSize);
+                memcpy(buf, ptr->data, ptr->data_bytes);
+                AMediaCodec_queueInputBuffer(
+                        codec_, bufIdx, 0, ptr->data_bytes, 0, 0);
+            } else {
+                printf("AMediaCodec_getInputBuffer failed or data.size() > bufSize %zu %zu\n", ptr->data_bytes, bufSize);
+            }
+        }else{
+            printf("AMediaCodec_dequeueInputBuffer failed %zu\n",bufIdx);
+        }
+
+        AMediaCodecBufferInfo info;
+        ssize_t outIdx = AMediaCodec_dequeueOutputBuffer(codec_, &info, 10000);
+        printf("AMediaCodec_dequeueOutputBuffer outIdx: %ld\n", outIdx);
+        while (outIdx >= 0) {
+            size_t out_size = 0;
+            uint8_t *buffer = AMediaCodec_getOutputBuffer(codec_, outIdx,
+                                                          &out_size);
+            printf("AMediaCodec_getOutputBuffer getbuffer size: %zu\n", out_size );
+            printf("frame write to %s\n", image_name.c_str() );
+            std::ofstream out(image_name, std::ios::binary | std::ios::out);
+            out.write(reinterpret_cast<char *>(buffer), out_size);
+            out.close();
+
+            //写完文件release
+            AMediaCodec_releaseOutputBuffer(codec_, outIdx, false);
+            outIdx = AMediaCodec_dequeueOutputBuffer(codec_, &info, 0);
+
+        }
+    }
+}
