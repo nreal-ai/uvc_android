@@ -41,7 +41,7 @@ static struct option long_options[] = {
 };
 
 void print_usage(const char *proc) {
-    printf("Version: 1.2.0\n");
+    printf("Version: 1.2.1\n");
     printf("Usage: %s [OPTIONS]\n", proc);
     printf("  -d, --dev=/dev/videoX\n");
     printf("  -s, --video_size=WIDTHxHEIGHT\n");
@@ -149,17 +149,15 @@ void outputV2(void *address, int width, int height, int64_t host_notify_time_nan
     ShowImage_Push(g_show_image_handle, &NRframe);
 }
 
-void outputRgb(void *address, int size, int64_t host_notify_time_nanos) {
-//    printf("UNIVERSAL_META_DATA size : %d\n", sizeof(UNIVERSAL_META_DATA));
+void outputRgb(void *address, int size,int width, int height, int64_t host_notify_time_nanos) {
+//    printf("data size %d UNIVERSAL_META_DATA size : %d\n",size, sizeof(UNIVERSAL_META_DATA));
     if(size <= 128){
         return;
     }
     UNIVERSAL_META_DATA *meta_data = (UNIVERSAL_META_DATA *) (address + size - 128);
 
-    printf("UNIVERSAL_META_DATA frame_id : %d\n", meta_data->frame_id);
+//    printf("UNIVERSAL_META_DATA frame_id : %d\n", meta_data->frame_id);
 //    printf("UNIVERSAL_META_DATA timestamp : %llu\n", meta_data->timestamp);
-    int width = 1920;
-    int height = 1080;
     NRGrayscaleCameraFrameData NRframe = {}; // 通过 {} 初始化所有成员为零
     NRframe.notify_time_nanos = host_notify_time_nanos;
     NRframe.camera_count = 1;
@@ -326,7 +324,7 @@ int main(int argc, char **argv) {
                 outputV2(frame_data, fmt.width, fmt.height, host_notify_time_nanos);
             }
         } else if(fmt.pixel_format == V4L2_PIX_FMT_HEVC){
-            outputRgb(frame_data,(int)frame_size,host_notify_time_nanos);
+            outputRgb(frame_data,(int)frame_size,fmt.width,fmt.height,host_notify_time_nanos);
         }
         if (of_fd >= 0) {
             if (frame_size != write(of_fd, frame_data, frame_size)) {

@@ -16,7 +16,8 @@
 #include <opencv2/highgui.hpp>
 #include <json.hpp> // json
 #include "signal_handler.h"  // 引入signal_handler
-
+#include <jpeglib.h>
+#include <turbojpeg.h>
 
 ShowImage::ShowImage(uint32_t _max_imu_buf_size, uint32_t _max_cam_buf_size, int format_version)
         : kMaxIMUSize_(_max_imu_buf_size), kMaxCamSize_(_max_cam_buf_size) {
@@ -279,6 +280,11 @@ void ShowImage::recordCamera() {
                                   std::ios::out);
                 metadata_txt.close();
             }
+
+            if(ptr->pixel_format == NR_CAMERA_PIXEL_FORMAT_HEVC){
+                createDir(cam_file_path_[0] + "odd/");
+                createDir(cam_file_path_[0] + "even/");
+            }
         }
 
         std::ostringstream o;
@@ -351,8 +357,14 @@ void ShowImage::recordCamera() {
                                                ptr->cameras[i].stride);
                     cv::imwrite(image_name, cv_image);
                 } else if (ptr->pixel_format == NR_CAMERA_PIXEL_FORMAT_HEVC) {
-                    image_name = cam_file_path_[0] + std::to_string(frame_index) + std::string(".yuv");
-                    decodeAndSaveFrame(ptr,image_name);
+                    tmp = std::to_string(frame_index) + std::string(".jpg");
+
+                    if(ptr->cameras[0].exposure_start_time_device % 2 == 0){
+                        image_name = cam_file_path_[0]  + "even/"+ tmp;
+                    }else{
+                        image_name = cam_file_path_[0]  + "odd/"+ tmp;
+                    }
+                    decodeFrame(ptr, image_name);
                 }
             }
 
@@ -470,7 +482,7 @@ void ShowImage::startMediaCodec(int width, int height) {
     }
 }
 
-void ShowImage::decodeAndSaveFrame(cam_ptr ptr,std::string image_name){
+void ShowImage::decodeFrame(cam_ptr ptr, std::string image_name) {
     if (codec_ == nullptr) {
         startMediaCodec(ptr->cameras[0].width, ptr->cameras[0].height);
     }
@@ -479,40 +491,45 @@ void ShowImage::decodeAndSaveFrame(cam_ptr ptr,std::string image_name){
     }
 
 
-
-    if (ptr->data[0] == 0x00 && ptr->data[1] == 0x00 && (ptr->data[2] == 0x01 || (ptr->data[2] == 0x00 && ptr->data[3] == 0x01))){
+    if (ptr->data[0] == 0x00 && ptr->data[1] == 0x00 &&
+        (ptr->data[2] == 0x01 || (ptr->data[2] == 0x00 && ptr->data[3] == 0x01))) {
         ssize_t bufIdx = AMediaCodec_dequeueInputBuffer(codec_, 10000);
-
-        printf("Decoding frame size: %zu bytes -> %ld\n", ptr->data_bytes, bufIdx);
-        // LOGI("Decoding frame size: %zu bytes -> %ld", data.size(), bufIdx);
+//        printf("Decoding frame size: %zu bytes -> %ld\n", ptr->data_bytes, bufIdx);
         if (bufIdx >= 0) {
             size_t bufSize;
             uint8_t *buf = AMediaCodec_getInputBuffer(codec_, bufIdx, &bufSize);
 
             if (buf && ptr->data_bytes <= bufSize) {
-                printf("AMediaCodec_queueInputBuffer data.size()  bufSize %zu %zu\n", ptr->data_bytes, bufSize);
+//                printf("AMediaCodec_queueInputBuffer data.size()  bufSize %zu %zu\n", ptr->data_bytes, bufSize);
                 memcpy(buf, ptr->data, ptr->data_bytes);
                 AMediaCodec_queueInputBuffer(
                         codec_, bufIdx, 0, ptr->data_bytes, 0, 0);
             } else {
-                printf("AMediaCodec_getInputBuffer failed or data.size() > bufSize %zu %zu\n", ptr->data_bytes, bufSize);
+                printf("AMediaCodec_getInputBuffer failed or data.size() > bufSize %zu %zu\n",
+                       ptr->data_bytes, bufSize);
             }
-        }else{
-            printf("AMediaCodec_dequeueInputBuffer failed %zu\n",bufIdx);
+        } else {
+            printf("AMediaCodec_dequeueInputBuffer failed %zu\n", bufIdx);
         }
 
         AMediaCodecBufferInfo info;
         ssize_t outIdx = AMediaCodec_dequeueOutputBuffer(codec_, &info, 10000);
-        printf("AMediaCodec_dequeueOutputBuffer outIdx: %ld\n", outIdx);
+//        printf("AMediaCodec_dequeueOutputBuffer outIdx: %ld\n", outIdx);
         while (outIdx >= 0) {
             size_t out_size = 0;
             uint8_t *buffer = AMediaCodec_getOutputBuffer(codec_, outIdx,
                                                           &out_size);
-            printf("AMediaCodec_getOutputBuffer getbuffer size: %zu\n", out_size );
-            printf("frame write to %s\n", image_name.c_str() );
-            std::ofstream out(image_name, std::ios::binary | std::ios::out);
-            out.write(reinterpret_cast<char *>(buffer), out_size);
-            out.close();
+//            printf("AMediaCodec_getOutputBuffer getbuffer size: %zu\n", out_size );
+//            printf("frame write to %s\n", image_name.c_str() );
+
+            // save raw data to file
+//            std::ofstream out(image_name, std::ios::binary | std::ios::out);
+//            out.write(reinterpret_cast<char *>(buffer), out_size);
+//            out.close();
+
+            // sava data as jpeg
+            saveData(buffer,ptr->cameras[0].width,ptr->cameras[0].height,image_name.c_str());
+
 
             //写完文件release
             AMediaCodec_releaseOutputBuffer(codec_, outIdx, false);
@@ -521,3 +538,73 @@ void ShowImage::decodeAndSaveFrame(cam_ptr ptr,std::string image_name){
         }
     }
 }
+
+void ShowImage::saveData(const uint8_t* data,int width,int height,const char* path) {
+    tjhandle handle = tjInitCompress();
+    unsigned char *jpg_buffer = NULL;
+    long unsigned int jpg_size = 0;
+
+    int ret = tjCompressFromYUV(handle, data, width, 1, height, TJSAMP_420, &jpg_buffer, &jpg_size, 80, 0);
+    FILE *fd = fopen(path,"wb");
+    fwrite(jpg_buffer,1,jpg_size,fd);
+    fclose(fd);
+
+    free(jpg_buffer);
+    tjDestroy(handle);
+}
+//void ShowImage::saveData(const uint8_t* data,int width,int height,const char* path){
+//    FILE* outfile = fopen(path, "wb");
+//    // 拆分 I420 平面
+//    const uint8_t* yPlane = data;
+//    const uint8_t* uPlane = yPlane + width * height;
+//    const uint8_t* vPlane = uPlane + (width / 2) * (height / 2);
+//
+//    jpeg_compress_struct cinfo;
+//    jpeg_error_mgr jerr;
+//    cinfo.err = jpeg_std_error(&jerr);
+//    jpeg_create_compress(&cinfo);
+//    jpeg_stdio_dest(&cinfo, outfile);
+//
+//    cinfo.image_width = width;
+//    cinfo.image_height = height;
+//    cinfo.input_components = 3;
+//    cinfo.in_color_space = JCS_YCbCr;
+//
+//    jpeg_set_defaults(&cinfo);
+//    jpeg_set_quality(&cinfo, 70, true);
+//
+//    // 输入为 YUV420P（I420）
+//    cinfo.raw_data_in = true;
+//
+//    // 设置采样率（4:2:0）
+//    cinfo.comp_info[0].h_samp_factor = 2;
+//    cinfo.comp_info[0].v_samp_factor = 2;
+//    cinfo.comp_info[1].h_samp_factor = 1;
+//    cinfo.comp_info[1].v_samp_factor = 1;
+//    cinfo.comp_info[2].h_samp_factor = 1;
+//    cinfo.comp_info[2].v_samp_factor = 1;
+//
+//    jpeg_start_compress(&cinfo, true);
+//    // 构造行指针数组
+//    JSAMPROW y[height];
+//    JSAMPROW u[height / 2];
+//    JSAMPROW v[height / 2];
+//
+//    for (int i = 0; i < height; i++) {
+//        y[i] = (JSAMPROW)(yPlane + i * width);
+//    }
+//    for (int i = 0; i < height / 2; i++) {
+//        u[i] = (JSAMPROW)(uPlane + i * (width / 2));
+//        v[i] = (JSAMPROW)(vPlane + i * (width / 2));
+//    }
+//
+//    JSAMPARRAY planes[3] = { y, u, v };
+//    // 编码
+//    while (cinfo.next_scanline < cinfo.image_height) {
+//        jpeg_write_raw_data(&cinfo, planes, 16);
+//    }
+//
+//    jpeg_finish_compress(&cinfo);
+//    jpeg_destroy_compress(&cinfo);
+//    fclose(outfile);
+//}

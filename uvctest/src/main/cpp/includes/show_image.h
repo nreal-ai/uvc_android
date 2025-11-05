@@ -31,7 +31,8 @@ class ShowImage {
 
 private:
     void startMediaCodec(int width, int height);
-    void decodeAndSaveFrame(cam_ptr ptr,std::string image_name);
+    void decodeFrame(cam_ptr ptr, std::string image_name);
+    void saveData(const uint8_t* data,int width,int height,const char* path);
   protected:
     bool record_thread_running_{false};
     Record::ThreadSafeQueue<cam_ptr> cam_queue_;

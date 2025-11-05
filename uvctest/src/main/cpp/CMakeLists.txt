@@ -37,23 +37,31 @@ add_executable(${CMAKE_PROJECT_NAME}
         )
 
 set(OpenCV_DIR /Users/lpzhang/proj/uvc_cam/opencv-4.5.4-android-sdk/OpenCV-android-sdk)
+set(Jpeg_DIR /Users/lpzhang/proj/uvc_cam/libjpeg-turbo)
 target_include_directories(${CMAKE_PROJECT_NAME}
         PRIVATE
         ${CMAKE_CURRENT_SOURCE_DIR}/includes
-        ${OpenCV_DIR}/sdk/native/jni/include)
+        ${OpenCV_DIR}/sdk/native/jni/include
+        ${Jpeg_DIR}/src
+        ${Jpeg_DIR}/build)
 # Specifies libraries CMake should link to your target library. You
 # can link libraries from various origins, such as libraries defined in this
 # build script, prebuilt third-party libraries, or Android system libraries.
 set(OpenCV_LIB_PATH ${OpenCV_DIR}/sdk/native/libs/${ANDROID_ABI})
-message(WARNING "OpenCV_LIB_PATH path is: ${OpenCV_LIB_PATH}")
+
 #link_directories(${OpenCV_LIB_PATH})
 add_library( lib_opencv SHARED IMPORTED )
 set_target_properties(lib_opencv PROPERTIES IMPORTED_LOCATION ${OpenCV_LIB_PATH}/libopencv_java4.so)
 
 
+add_library(lib_jpeg SHARED IMPORTED)
+set_target_properties(lib_jpeg PROPERTIES IMPORTED_LOCATION
+        ${Jpeg_DIR}/build/libturbojpeg.so)
+
 target_link_libraries(${CMAKE_PROJECT_NAME}
         # List libraries link to the target library
         lib_opencv
+        lib_jpeg
         android
         log
         mediandk)
