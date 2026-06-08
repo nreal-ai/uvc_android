@@ -36,12 +36,13 @@ static struct option long_options[] = {
         {"pixel_format",   required_argument, 0, 'p'},
         {"format_version", required_argument, 0, 'v'},
         {"output_file",    optional_argument, 0, 'o'},
+        {"no_test",        optional_argument, 0, 'n'},
         {"help",           no_argument,       0, 'h'},
         {0, 0,                                0, 0}  // 结束标志
 };
 
 void print_usage(const char *proc) {
-    printf("Version: 1.2.1\n");
+    printf("Version: 1.2.2\n");
     printf("Usage: %s [OPTIONS]\n", proc);
     printf("  -d, --dev=/dev/videoX\n");
     printf("  -s, --video_size=WIDTHxHEIGHT\n");
@@ -49,6 +50,7 @@ void print_usage(const char *proc) {
     printf("  -f, --pixel_format=PIXEL_FORMAT\n");
     printf("  -v, --format_version=FORMAT_VERSION\n");
     printf("  -o, --output_file=FILE\n");
+    printf("  -n, --no_test=NO_TEST\n");
     printf("  -h, --help\n");
     printf("Available pixel formats:\n");
     printf("  YUYV\n");
@@ -149,9 +151,9 @@ void outputV2(void *address, int width, int height, int64_t host_notify_time_nan
     ShowImage_Push(g_show_image_handle, &NRframe);
 }
 
-void outputRgb(void *address, int size,int width, int height, int64_t host_notify_time_nanos) {
+void outputRgb(void *address, int size, int width, int height, int64_t host_notify_time_nanos) {
 //    printf("data size %d UNIVERSAL_META_DATA size : %d\n",size, sizeof(UNIVERSAL_META_DATA));
-    if(size <= 128){
+    if (size <= 128) {
         return;
     }
     UNIVERSAL_META_DATA *meta_data = (UNIVERSAL_META_DATA *) (address + size - 128);
@@ -197,9 +199,12 @@ int main(int argc, char **argv) {
     int c;
 
     char *photo_path = "";
+    // 视频格式，针对单双目情况。0为双目，1为单目
     int format_version = 0;
 
-    while ((c = getopt_long(argc, argv, "d:s:r:f:v:o:h", long_options, &opt_index)) != -1) {
+    int no_test = 0;
+
+    while ((c = getopt_long(argc, argv, "d:s:r:f:v:o:n:h", long_options, &opt_index)) != -1) {
         switch (c) {
             case 'd':
                 dev = optarg;
@@ -220,6 +225,9 @@ int main(int argc, char **argv) {
             case 'o':
                 output_file = optarg;
                 break;
+            case 'n':
+                no_test = atoi(optarg);
+                break;
             case 'h':
                 print_usage(argv[0]);
                 return 1;
@@ -239,9 +247,12 @@ int main(int argc, char **argv) {
 
 
     // 彩色摄像头只存在单目情况，忽略输入的format version参数
-    int real_format_version = fmt.pixel_format == V4L2_PIX_FMT_HEVC? 1: format_version;
-    g_show_image_handle = ShowImage_Create(10000, 50000,real_format_version);
-    ShowImage_Start(g_show_image_handle, RECORD_SAVE_ALL, photo_path, "cam0", "cam1");
+    int real_format_version = fmt.pixel_format == V4L2_PIX_FMT_HEVC ? 1 : format_version;
+
+    if (no_test == 0) {
+        g_show_image_handle = ShowImage_Create(10000, 50000, real_format_version);
+        ShowImage_Start(g_show_image_handle, RECORD_SAVE_ALL, photo_path, "cam0", "cam1");
+    }
     if (output_file != NULL) {
         of_fd = open(output_file, O_WRONLY | O_CREAT | O_APPEND, 0666);
         if (of_fd < 0) {
@@ -311,25 +322,29 @@ int main(int argc, char **argv) {
         elapsed_seconds = (current_time.tv_sec - start_time.tv_sec) +
                           (current_time.tv_nsec - start_time.tv_nsec) / 1e9;
 
-        void *frame_data = buffers[buffer_index].address;
-        size_t frame_size = buffers[buffer_index].bytesused;
 
-        int64_t host_notify_time_nanos =
-                (int64_t) current_time.tv_sec * 1000000000LL + current_time.tv_nsec;
-        if (fmt.pixel_format == V4L2_PIX_FMT_GREY) {
-            // log output
-            if (format_version == 0) {
-                output(frame_data, fmt.width, fmt.height, host_notify_time_nanos);
-            } else if (format_version == 1) {
-                outputV2(frame_data, fmt.width, fmt.height, host_notify_time_nanos);
+        if (no_test == 0) {
+            void *frame_data = buffers[buffer_index].address;
+            size_t frame_size = buffers[buffer_index].bytesused;
+
+            int64_t host_notify_time_nanos =
+                    (int64_t) current_time.tv_sec * 1000000000LL + current_time.tv_nsec;
+            if (fmt.pixel_format == V4L2_PIX_FMT_GREY) {
+                // log output
+                if (format_version == 0) {
+                    output(frame_data, fmt.width, fmt.height, host_notify_time_nanos);
+                } else if (format_version == 1) {
+                    outputV2(frame_data, fmt.width, fmt.height, host_notify_time_nanos);
+                }
+            } else if (fmt.pixel_format == V4L2_PIX_FMT_HEVC) {
+                outputRgb(frame_data, (int) frame_size, fmt.width, fmt.height,
+                          host_notify_time_nanos);
             }
-        } else if(fmt.pixel_format == V4L2_PIX_FMT_HEVC){
-            outputRgb(frame_data,(int)frame_size,fmt.width,fmt.height,host_notify_time_nanos);
-        }
-        if (of_fd >= 0) {
-            if (frame_size != write(of_fd, frame_data, frame_size)) {
-                printf("Saved frame failed: %s\n", strerror(errno));
-                break;
+            if (of_fd >= 0) {
+                if (frame_size != write(of_fd, frame_data, frame_size)) {
+                    printf("Saved frame failed: %s\n", strerror(errno));
+                    break;
+                }
             }
         }
 
@@ -369,7 +384,9 @@ int main(int argc, char **argv) {
     v4l2_free_buffers(buffers, fd, buffer_count);
     v4l2_close(fd);
 
-    ShowImage_Stop(g_show_image_handle);
-    ShowImage_Destroy(g_show_image_handle);
+    if (no_test == 0) {
+        ShowImage_Stop(g_show_image_handle);
+        ShowImage_Destroy(g_show_image_handle);
+    }
     return 0;
 }
