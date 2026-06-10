@@ -13,6 +13,10 @@
 #include <media/NdkImageReader.h>
 #include <media/NdkMediaCodec.h>
 
+#include <sys/resource.h>
+#include <pthread.h>
+#include <sched.h>
+
 #include "v4l2.h"
 #include "metadata.h"
 #include "show_image_global.h"
@@ -191,6 +195,17 @@ void outputRgb(void *address, int size, int width, int height, int64_t host_noti
 }
 
 int main(int argc, char **argv) {
+
+    // 提供进程优先级
+    setpriority(PRIO_PROCESS, 0, -20);
+
+    struct sched_param param;
+    param.sched_priority = 99;
+    sched_setscheduler(
+            0,
+            SCHED_FIFO,
+            &param);
+
     video_fmt_t fmt = {0};
     const char *dev = "/dev/videoX\0";
     const char *output_file = NULL;
@@ -275,7 +290,10 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    const int buffer_count = 4;
+    int buffer_count = 4;
+    if (fmt.frame_rate >= 60){
+        buffer_count = 8;
+    }
     frame_buffer_t *buffers = NULL;
     if (v4l2_allocate_buffers(&buffers, fd, buffer_count) < 0) {
         fprintf(stderr, "Failed to allocate buffers\n");
